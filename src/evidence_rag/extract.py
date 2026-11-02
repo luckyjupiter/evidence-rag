@@ -81,21 +81,16 @@ def _normalize_predicate(value: object) -> str:
 
 def _json_object(raw: str) -> dict | None:
     text = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip(), flags=re.MULTILINE)
-    start = text.find("{")
-    if start == -1:
-        return None
-    depth = 0
-    for pos in range(start, len(text)):
-        char = text[pos]
-        if char == "{":
-            depth += 1
-        elif char == "}":
-            depth -= 1
-            if depth == 0:
-                try:
-                    return json.loads(text[start : pos + 1])
-                except json.JSONDecodeError:
-                    return None
+    decoder = json.JSONDecoder()
+    for start, char in enumerate(text):
+        if char != "{":
+            continue
+        try:
+            value, _ = decoder.raw_decode(text, start)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(value, dict):
+            return value
     return None
 
 

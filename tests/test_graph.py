@@ -127,3 +127,13 @@ def test_parse_extraction_handles_malformed_output():
 def test_parse_extraction_strips_code_fence():
     payload = '```json\n{"entities": [{"name": "A"}], "relations": []}\n```'
     assert parse_extraction(payload).entities[0].name == "A"
+
+
+def test_parse_extraction_handles_braces_inside_quoted_evidence():
+    payload = (
+        'Here is the result: {"entities": [], "relations": ['
+        '{"subject": "A", "predicate": "mentions", "object": "B", '
+        '"evidence": "the set {x} and a closing } inside a quote"}]}'
+    )
+    relation = parse_extraction(payload).relations[0]
+    assert relation.evidence == "the set {x} and a closing } inside a quote"
