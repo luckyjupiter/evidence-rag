@@ -24,3 +24,4 @@ jobs:
       - run: python -m compileall -q src
       - run: python -m pytest
       - run: python examples/demo.py
+      - run: python examples/evaluate.py

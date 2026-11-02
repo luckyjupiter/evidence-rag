@@ -137,3 +137,52 @@ def test_parse_extraction_handles_braces_inside_quoted_evidence():
     )
     relation = parse_extraction(payload).relations[0]
     assert relation.evidence == "the set {x} and a closing } inside a quote"
+
+
+def test_extraction_can_be_added_after_initial_ingestion(store):
+    text = "Mira Chen designed the trial at North Orchard."
+    ingest_text(store, text, source="late-graph")
+    extractor = FakeExtractor()
+    result = ingest_text(store, text, source="late-graph", extractor=extractor)
+    assert result.unchanged
+    assert extractor.calls == 1
+    assert store.relations_for("Mira Chen")
+
+
+def test_failed_extraction_is_retried_without_changing_source(store):
+    class RetryExtractor(FakeExtractor):
+        def extract(self, text):
+            if self.calls == 0:
+                self.calls += 1
+                raise RuntimeError("temporary provider failure")
+            return super().extract(text)
+
+    extractor = RetryExtractor()
+    text = "Mira Chen designed the trial at North Orchard."
+    with pytest.raises(RuntimeError, match="temporary provider failure"):
+        ingest_text(store, text, source="retry", extractor=extractor)
+    ingest_text(store, text, source="retry", extractor=extractor)
+    assert store.relations_for("Mira Chen")
+
+
+def test_reextract_replaces_previous_graph_without_duplicates(store):
+    extractor = FakeExtractor()
+    text = "Mira Chen designed the trial at North Orchard."
+    ingest_text(store, text, source="rerun", extractor=extractor)
+    before = store.stats()
+    ingest_text(store, text, source="rerun", extractor=extractor, reextract=True)
+    assert extractor.calls == 2
+    assert store.stats() == before
+
+
+def test_changing_extractor_replaces_graph_on_unchanged_text(store):
+    text = "Mira Chen designed the trial at North Orchard."
+    ingest_text(store, text, source="new-extractor", extractor=FakeExtractor())
+    assert store.relations_for("Mira Chen")
+
+    class EmptyExtractor:
+        def extract(self, text):
+            return Extraction()
+
+    ingest_text(store, text, source="new-extractor", extractor=EmptyExtractor())
+    assert store.relations_for("Mira Chen") == []

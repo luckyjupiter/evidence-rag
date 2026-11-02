@@ -62,6 +62,11 @@ def main(argv: list[str] | None = None) -> int:
         help="extract entities and relations with the configured LLM endpoint",
     )
     ingest.add_argument(
+        "--reextract",
+        action="store_true",
+        help="rerun extraction and replace graph evidence (requires --extract)",
+    )
+    ingest.add_argument(
         "--embed",
         action="store_true",
         help="store embeddings with the configured embedding endpoint",
@@ -91,6 +96,8 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         if args.command == "ingest":
+            if args.reextract and not args.extract:
+                parser.error("--reextract requires --extract")
             if args.title and len(args.paths) != 1:
                 parser.error("--title can only be used with one document")
             extractor = OpenAICompatibleExtractor.from_env() if args.extract else None
@@ -107,6 +114,7 @@ def main(argv: list[str] | None = None) -> int:
                     overlap=args.overlap,
                     extractor=extractor,
                     embedder=embedder,
+                    reextract=args.reextract,
                 )
                 state = "unchanged" if result.unchanged else "ingested"
                 print(f"{state}: {result.source}  chunks={result.chunks}  title={result.title!r}")

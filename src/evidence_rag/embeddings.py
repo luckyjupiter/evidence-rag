@@ -25,12 +25,11 @@ class HashingEmbedder:
     exercised offline and in tests without a provider or API key.
     """
 
-    name = "hashing-256-v1"
-
     def __init__(self, dim: int = 256) -> None:
         if dim <= 0:
             raise ValueError("dim must be positive")
         self.dim = dim
+        self.name = f"hashing-{dim}-v1"
 
     def embed(self, texts: Sequence[str]) -> list[list[float]]:
         vectors: list[list[float]] = []

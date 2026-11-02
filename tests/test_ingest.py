@@ -58,3 +58,12 @@ def test_different_sources_are_distinct_documents(store):
     ingest_text(store, "Shared wording about basins.", source="a")
     ingest_text(store, "Shared wording about basins.", source="b")
     assert store.stats().documents == 2
+
+
+def test_new_chunk_settings_rebuild_identical_source(store):
+    text = "Long instrument notes and observations. " * 25
+    first = ingest_text(store, text, source="rechunk", chunk_chars=800, overlap=80)
+    second = ingest_text(store, text, source="rechunk", chunk_chars=200, overlap=20)
+    assert first.doc_id == second.doc_id
+    assert not second.unchanged
+    assert second.chunks > first.chunks

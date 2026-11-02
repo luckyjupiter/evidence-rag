@@ -71,3 +71,10 @@ def test_empty_query_returns_nothing(store):
     ingest_text(store, "Anything.", source="x")
     assert keyword_search(store, "   ", limit=5) == []
     assert vector_search(store, "anything", HashingEmbedder(), limit=0) == []
+
+
+def test_hashing_model_identity_includes_vector_dimension(store):
+    embedder = HashingEmbedder(32)
+    ingest_text(store, "A distinctive word.", source="x", embedder=embedder)
+    assert vector_search(store, "distinctive", embedder)
+    assert vector_search(store, "distinctive", HashingEmbedder(64)) == []

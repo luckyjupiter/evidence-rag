@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from evidence_rag.cli import main
 
 CORPUS = Path(__file__).resolve().parents[1] / "examples" / "corpus"
@@ -47,3 +49,9 @@ def test_cli_rejects_title_for_multiple_paths(tmp_path):
         assert exc.code == 2
     else:  # pragma: no cover
         raise AssertionError("expected argparse error")
+
+
+def test_cli_reextract_requires_extract(tmp_path):
+    with pytest.raises(SystemExit) as error:
+        main(["--db", str(tmp_path / "bad.db"), "ingest", "notes.md", "--reextract"])
+    assert error.value.code == 2

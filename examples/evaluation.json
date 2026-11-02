@@ -1,0 +1,10 @@
+[
+  {"query": "vent tube salt creep", "source": "harbor-point-calibration.md", "quote": "partial blockage in the vent tube"},
+  {"query": "HG-14 pressure sensor", "source": "harbor-point-calibration.md", "quote": "model HG-14"},
+  {"query": "soil moisture irrigation trigger", "source": "north-orchard-trial.md", "quote": "18\npercent volumetric water content"},
+  {"query": "Mira Chen designed trial", "source": "north-orchard-trial.md", "quote": "Mira Chen designed the trial"},
+  {"query": "19 percent water", "source": "north-orchard-trial.md", "quote": "19 percent less water"},
+  {"query": "C-21 weekly summaries", "source": "cedar-room-inventory.md", "quote": "Box C-21 holds North Orchard"},
+  {"query": "hygrometer humidity Monday", "source": "cedar-room-inventory.md", "quote": "above 60 percent relative humidity"},
+  {"query": "xylophone volcanology", "source": null, "quote": null}
+]

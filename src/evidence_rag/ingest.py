@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -62,6 +63,7 @@ def ingest_text(
     overlap: int = 200,
     extractor: Extractor | None = None,
     embedder: Embedder | None = None,
+    reextract: bool = False,
 ) -> IngestResult:
     """Ingest text under a stable source key, returning what changed."""
     title = title or _default_title(text, source)
@@ -82,10 +84,21 @@ def ingest_text(
                 for row, vector in zip(pending, vectors):
                     store.set_embedding(row["id"], embedder.name, vector)
 
-    if extractor is not None and not unchanged:
-        extracted = [(row, extractor.extract(row["text"])) for row in chunks]
+    if extractor is not None:
+        # Custom extractors may supply a versioned name. Provider URL/model
+        # distinguish different configurations without storing API keys.
+        extractor_key = json.dumps([
+            getattr(extractor, "name", None) or
+            f"{type(extractor).__module__}.{type(extractor).__qualname__}",
+            getattr(extractor, "base_url", None),
+            getattr(extractor, "model", None),
+        ])
+        completed = set() if reextract else store.extracted_ids(extractor_key)
+        pending = [row for row in chunks if row["id"] not in completed]
+        extracted = [(row, extractor.extract(row["text"])) for row in pending]
         with store.conn:
             for row, result in extracted:
+                store.clear_chunk_graph(row["id"])
                 entity_ids: dict[str, str] = {}
                 for entity in result.entities:
                     entity_ids[entity.name.casefold()] = store.upsert_entity(
@@ -110,6 +123,7 @@ def ingest_text(
                         row["id"],
                         relation.evidence,
                     )
+                store.mark_extracted(row["id"], extractor_key)
 
     return IngestResult(
         doc_id=doc_id,
@@ -130,6 +144,7 @@ def ingest_file(
     overlap: int = 200,
     extractor: Extractor | None = None,
     embedder: Embedder | None = None,
+    reextract: bool = False,
 ) -> IngestResult:
     path = Path(path)
     text = read_document(path)
@@ -142,4 +157,5 @@ def ingest_file(
         overlap=overlap,
         extractor=extractor,
         embedder=embedder,
+        reextract=reextract,
     )

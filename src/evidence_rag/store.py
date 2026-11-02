@@ -86,6 +86,11 @@ CREATE TABLE IF NOT EXISTS embeddings (
     dim      INTEGER NOT NULL,
     vector   BLOB NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS extraction_state (
+    chunk_id TEXT PRIMARY KEY REFERENCES chunks(id) ON DELETE CASCADE,
+    extractor TEXT NOT NULL
+);
 """
 
 
@@ -151,7 +156,13 @@ class Store:
         doc_id = document_id(source)
         existing = self.get_document(source)
         if existing is not None and existing["sha256"] == digest:
-            return doc_id, True
+            previous = list(self.conn.execute(
+                "SELECT idx, start, end, text FROM chunks WHERE doc_id = ? ORDER BY idx",
+                (doc_id,),
+            ))
+            current = [(span.idx, span.start, span.end, span.text) for span in spans]
+            if existing["title"] == title and [tuple(row) for row in previous] == current:
+                return doc_id, True
 
         now = datetime.now(timezone.utc).isoformat()
         with self.conn:
@@ -188,6 +199,22 @@ class Store:
                 "SELECT id, idx, text FROM chunks WHERE doc_id = ? ORDER BY idx",
                 (doc_id,),
             )
+        )
+
+    def extracted_ids(self, extractor: str) -> set[str]:
+        return {row[0] for row in self.conn.execute(
+            "SELECT chunk_id FROM extraction_state WHERE extractor = ?", (extractor,)
+        )}
+
+    def clear_chunk_graph(self, chunk: str) -> None:
+        self.conn.execute("DELETE FROM mentions WHERE chunk_id = ?", (chunk,))
+        self.conn.execute("DELETE FROM relations WHERE chunk_id = ?", (chunk,))
+
+    def mark_extracted(self, chunk: str, extractor: str) -> None:
+        self.conn.execute(
+            "INSERT INTO extraction_state (chunk_id, extractor) VALUES (?, ?) "
+            "ON CONFLICT(chunk_id) DO UPDATE SET extractor = excluded.extractor",
+            (chunk, extractor),
         )
 
     # ----------------------------------------------------------------- graph
