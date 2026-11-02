@@ -72,11 +72,17 @@ class DemoExtractor:
 
 
 def main() -> None:
-    corpus = Path(__file__).resolve().parent / "corpus"
+    repo_root = Path(__file__).resolve().parents[1]
+    corpus = repo_root / "examples" / "corpus"
     with tempfile.TemporaryDirectory() as tmp:
         with Store(Path(tmp) / "demo.db") as store:
             for path in sorted(corpus.glob("*.md")):
-                result = ingest_file(store, path, extractor=DemoExtractor())
+                result = ingest_file(
+                    store,
+                    path,
+                    source=str(path.relative_to(repo_root)),
+                    extractor=DemoExtractor(),
+                )
                 print(f"ingested {result.title}  chunks={result.chunks}")
 
             stats = store.stats()
